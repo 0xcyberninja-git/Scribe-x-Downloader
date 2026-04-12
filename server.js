@@ -83,7 +83,7 @@ app.post('/api/download', async (req, res) => {
 
 app.use('/output', express.static(path.join(__dirname, 'output')));
 
-const PORT = 8081;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`SCRIBEX Backend Server running openly on http://0.0.0.0:${PORT}`);
+    console.log(`SCRIBEX Backend Server running openly on port ${PORT}`);
 });
