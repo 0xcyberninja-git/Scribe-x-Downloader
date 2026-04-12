@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer'
 import { directoryIo } from "../io/DirectoryIo.js";
 
 class PuppeteerSg {
-  static buffer = 1000;
+  static buffer = 100;
 
   constructor() {
     if (!PuppeteerSg.instance) {
@@ -40,6 +40,8 @@ class PuppeteerSg {
       await this.launch()
     }
     let page = await this.browser.newPage()
+    // MASSIVE SPEED HACK: Force an enormous height to instantly load 10x more content natively!
+    await page.setViewport({ width: 1920, height: 10800 });
     await page.goto(url, {
       waitUntil: "load",
     })
