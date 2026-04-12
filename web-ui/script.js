@@ -69,28 +69,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ url })
             });
 
-            const data = await response.json();
-            
-            clearInterval(progressInterval);
-            updateProgressBar(100);
-
-            if (data.success) {
-                logLine('Extraction Successful!', 'success');
-                logLine(`File generated: ${data.filename}`, 'sys-msg');
-                logLine('Your document is downloading...', 'success');
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
                 
-                // Trigger real file download from the server
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = data.fileUrl; // Serves from the real output dir
-                a.download = data.filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                clearInterval(progressInterval);
+                updateProgressBar(100);
 
+                if (data.success) {
+                    logLine('Extraction Successful!', 'success');
+                    logLine(`File generated: ${data.filename}`, 'sys-msg');
+                    logLine('Your document is downloading...', 'success');
+                    
+                    // Trigger real file download from the server
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = data.fileUrl; 
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                } else {
+                    logLine(`Backend Error: ${data.error}`, 'error');
+                    if (data.details) logLine(data.details.substring(0, 250), 'error');
+                }
             } else {
-                logLine(`Backend Error: ${data.error}`, 'error');
-                if (data.details) logLine(data.details.substring(0,250), 'error');
+                clearInterval(progressInterval);
+                const textErr = await response.text();
+                logLine(`Server returned an HTML/Text page instead of Data (Status ${response.status}). Are you on Port 8081?`, 'error');
+                console.error("HTML Received:", textErr);
             }
 
         } catch (err) {
