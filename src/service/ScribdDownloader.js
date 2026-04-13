@@ -46,18 +46,11 @@ class ScribdDownloader {
             const {title, pages} = await this.processPage(page);
             const identifier = `${sanitize(filename === "title" ? title : id)}`
             const pdfPath = `${output}/${identifier}.pdf`
-            if (pages.every(p => p.width === pages[0].width && p.height === pages[0].height)) {
-                await puppeteerSg.generatePDF(page, pdfPath, {
-                    width: pages[0].width,
-                    height: pages[0].height
-                })
-            } else {
-                const tempDir = `${output}/${identifier}_temp`
-                const groups = await this.groupPagesByDimensions(pages)
-                const pdfPaths = await this.generatePDFs(page, groups, tempDir);
-                await pdfGenerator.merge(pdfPaths, pdfPath);
-                directoryIo.remove(tempDir)
-            }
+            const tempDir = `${output}/${identifier}_temp`
+            const groups = await this.groupPagesByDimensions(pages)
+            const pdfPaths = await this.generatePDFs(page, groups, tempDir);
+            await pdfGenerator.merge(pdfPaths, pdfPath);
+            directoryIo.remove(tempDir)
             console.log(`Generated: ${pdfPath}`);
         } catch (err) {
             throw err;
@@ -106,19 +99,22 @@ class ScribdDownloader {
             return groups;
         }
         let ids = [pages[0].id];
+        let currentWidth = pages[0].width;
+        let currentHeight = pages[0].height;
         ScribdDownloader.progressBar.start(pages.length, 1);
         for (let i = 1; i < pages.length; i++) {
-            const prev = pages[i - 1];
             const curr = pages[i];
-            if (curr.width === prev.width && curr.height === prev.height) {
+            if (curr.width === currentWidth && curr.height === currentHeight && ids.length < 50) {
                 ids.push(curr.id);
             } else {
                 groups.push({
                     ids: ids,
-                    width: prev.width,
-                    height: prev.height,
+                    width: currentWidth,
+                    height: currentHeight,
                 });
                 ids = [curr.id];
+                currentWidth = curr.width;
+                currentHeight = curr.height;
             }
             ScribdDownloader.progressBar.update(i + 1);
         }
@@ -126,8 +122,8 @@ class ScribdDownloader {
         ScribdDownloader.progressBar.stop();
         groups.push({
             ids: ids,
-            width: pages[pages.length - 1].width,
-            height: pages[pages.length - 1].height,
+            width: currentWidth,
+            height: currentHeight,
         });
         return groups;
     }

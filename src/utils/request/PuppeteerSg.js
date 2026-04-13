@@ -44,6 +44,7 @@ class PuppeteerSg {
     await page.setViewport({ width: 1920, height: 10800 });
     await page.goto(url, {
       waitUntil: "load",
+      timeout: 0,
     })
     await this.injectHelperFunctions(page)
     await new Promise(resolve => setTimeout(resolve, this.buffer))
@@ -85,25 +86,33 @@ class PuppeteerSg {
             if (selector && !container) {
               return resolve();
             }
-            let prevScroll = 0;
+            let prevScroll = -1;
+            let stuckCount = 0;
+            const maxStuck = 50; // Wait for dynamic content
             const timer = setInterval(() => {
               if (container) {
                 container.scrollTop += container.clientHeight;
                 if (container.scrollTop === prevScroll) {
-                  clearInterval(timer);
-                  resolve();
-                }
-                prevScroll = container.scrollTop;
-                if (container.scrollTop + container.clientHeight >= container.scrollHeight) {
-                  clearInterval(timer);
-                  resolve();
+                  stuckCount++;
+                  if (stuckCount >= maxStuck) {
+                    clearInterval(timer);
+                    resolve();
+                  }
+                } else {
+                  stuckCount = 0;
+                  prevScroll = container.scrollTop;
                 }
               } else {
-                const scrollHeight = document.body.scrollHeight;
+                const prevY = window.scrollY;
                 window.scrollBy(0, window.innerHeight * 0.8);
-                if (window.innerHeight + window.scrollY >= scrollHeight) {
-                  clearInterval(timer);
-                  resolve();
+                if (window.scrollY === prevY) {
+                  stuckCount++;
+                  if (stuckCount >= maxStuck) {
+                    clearInterval(timer);
+                    resolve();
+                  }
+                } else {
+                  stuckCount = 0;
                 }
               }
             }, rendertime);
